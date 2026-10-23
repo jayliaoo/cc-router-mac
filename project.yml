@@ -1,0 +1,39 @@
+# xcodegen 清单：生成根目录 cc-router-mac.xcodeproj（pbxproj 入库）。
+# 重新生成：`xcodegen generate`（需 xcodegen，`brew install xcodegen`）。
+# app target 引用仓库根的本地 SPM 包（产品 CcRouterCore），壳内只有 UI 与生命周期编排。
+name: cc-router-mac
+options:
+  bundleIdPrefix: dev.ccrouter
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+packages:
+  CcRouterCore:
+    path: .
+targets:
+  cc-router-mac:
+    type: application
+    platform: macOS
+    sources:
+      - App
+    dependencies:
+      - package: CcRouterCore
+        product: CcRouterCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: cc-router-mac
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        # 菜单栏 app：不进 Dock（spec 24）
+        LSUIElement: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.ccrouter.mac
+schemes:
+  cc-router-mac:
+    build:
+      targets:
+        cc-router-mac: all
+    run:
+      config: Debug

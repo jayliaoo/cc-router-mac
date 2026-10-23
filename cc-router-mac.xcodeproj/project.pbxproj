@@ -1,0 +1,329 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		6083C09382CBF02DB8C18430 /* CcRouterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4D188216F5D133782B867D /* CcRouterApp.swift */; };
+		8CA54EF23ABE18F117D15353 /* CcRouterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5C4157627D4316A5074D9370 /* CcRouterCore */; };
+		A32A3AAD2AF2F51FAF874E65 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF58CAE272A87E892B92DE17 /* AppModel.swift */; };
+		E33BC8F689652E987241162A /* GatewayPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F9122FE73296167E3ECD83 /* GatewayPopover.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		3F4D188216F5D133782B867D /* CcRouterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CcRouterApp.swift; sourceTree = "<group>"; };
+		50451A386C812DB0ABD8CCB8 /* cc-router-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "cc-router-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		99E1FDC4D103B96CBACD0869 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		BF58CAE272A87E892B92DE17 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		C1F9122FE73296167E3ECD83 /* GatewayPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayPopover.swift; sourceTree = "<group>"; };
+		E9A9AF5F95E7732E854DCDA2 /* t06 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = t06; path = .; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C565FBC445A62A41C5B90984 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8CA54EF23ABE18F117D15353 /* CcRouterCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		043159FEAB0176AB4D4BD7D8 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BF58CAE272A87E892B92DE17 /* AppModel.swift */,
+				3F4D188216F5D133782B867D /* CcRouterApp.swift */,
+				C1F9122FE73296167E3ECD83 /* GatewayPopover.swift */,
+				99E1FDC4D103B96CBACD0869 /* Info.plist */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		35587FB8D9568C4800F6B2CE /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				E9A9AF5F95E7732E854DCDA2 /* t06 */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		6FFAA4242C55CEB1812DB118 = {
+			isa = PBXGroup;
+			children = (
+				043159FEAB0176AB4D4BD7D8 /* App */,
+				35587FB8D9568C4800F6B2CE /* Packages */,
+				D4BF91EE8EB3DFB5931CBC03 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D4BF91EE8EB3DFB5931CBC03 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				50451A386C812DB0ABD8CCB8 /* cc-router-mac.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AC07FB0F2EF2346EC4450408 /* cc-router-mac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 723E6384169A338077D9CC94 /* Build configuration list for PBXNativeTarget "cc-router-mac" */;
+			buildPhases = (
+				F26519BA88E5F32726C7FCD0 /* Sources */,
+				C565FBC445A62A41C5B90984 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "cc-router-mac";
+			packageProductDependencies = (
+				5C4157627D4316A5074D9370 /* CcRouterCore */,
+			);
+			productName = "cc-router-mac";
+			productReference = 50451A386C812DB0ABD8CCB8 /* cc-router-mac.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		54602FDA5888B4991747FF1F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 6CDDC20BC76FA952188C5E9A /* Build configuration list for PBXProject "cc-router-mac" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 6FFAA4242C55CEB1812DB118;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				706F42E4BF40E2FEC2C132D6 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = D4BF91EE8EB3DFB5931CBC03 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AC07FB0F2EF2346EC4450408 /* cc-router-mac */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F26519BA88E5F32726C7FCD0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A32A3AAD2AF2F51FAF874E65 /* AppModel.swift in Sources */,
+				6083C09382CBF02DB8C18430 /* CcRouterApp.swift in Sources */,
+				E33BC8F689652E987241162A /* GatewayPopover.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3E4F6FB86A2BAED1EB5874F6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ccrouter.mac;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		7B13EC419151EF9DA5207EE7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.ccrouter.mac;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		8F288DCC977A349E8C52BDC1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		98ADB1E373F455919348FF4E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6CDDC20BC76FA952188C5E9A /* Build configuration list for PBXProject "cc-router-mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				98ADB1E373F455919348FF4E /* Debug */,
+				8F288DCC977A349E8C52BDC1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		723E6384169A338077D9CC94 /* Build configuration list for PBXNativeTarget "cc-router-mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3E4F6FB86A2BAED1EB5874F6 /* Debug */,
+				7B13EC419151EF9DA5207EE7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		706F42E4BF40E2FEC2C132D6 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5C4157627D4316A5074D9370 /* CcRouterCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CcRouterCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 54602FDA5888B4991747FF1F /* Project object */;
+}
