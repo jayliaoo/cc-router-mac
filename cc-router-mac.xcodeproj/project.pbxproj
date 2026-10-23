@@ -11,15 +11,17 @@
 		8CA54EF23ABE18F117D15353 /* CcRouterCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5C4157627D4316A5074D9370 /* CcRouterCore */; };
 		A32A3AAD2AF2F51FAF874E65 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF58CAE272A87E892B92DE17 /* AppModel.swift */; };
 		E33BC8F689652E987241162A /* GatewayPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F9122FE73296167E3ECD83 /* GatewayPopover.swift */; };
+		F9C672BA0CD66B20B40232C2 /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9080D6FB775BA4748C2BDA87 /* SettingsWindow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		3F4D188216F5D133782B867D /* CcRouterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CcRouterApp.swift; sourceTree = "<group>"; };
 		50451A386C812DB0ABD8CCB8 /* cc-router-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "cc-router-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9080D6FB775BA4748C2BDA87 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
 		99E1FDC4D103B96CBACD0869 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BF58CAE272A87E892B92DE17 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		C1F9122FE73296167E3ECD83 /* GatewayPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayPopover.swift; sourceTree = "<group>"; };
-		E9A9AF5F95E7732E854DCDA2 /* t06 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = t06; path = .; sourceTree = SOURCE_ROOT; };
+		D3E5FD24B79C171480F4841C /* t07 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = t07; path = .; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +43,7 @@
 				3F4D188216F5D133782B867D /* CcRouterApp.swift */,
 				C1F9122FE73296167E3ECD83 /* GatewayPopover.swift */,
 				99E1FDC4D103B96CBACD0869 /* Info.plist */,
+				9080D6FB775BA4748C2BDA87 /* SettingsWindow.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -48,7 +51,7 @@
 		35587FB8D9568C4800F6B2CE /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				E9A9AF5F95E7732E854DCDA2 /* t06 */,
+				D3E5FD24B79C171480F4841C /* t07 */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -133,6 +136,7 @@
 				A32A3AAD2AF2F51FAF874E65 /* AppModel.swift in Sources */,
 				6083C09382CBF02DB8C18430 /* CcRouterApp.swift in Sources */,
 				E33BC8F689652E987241162A /* GatewayPopover.swift in Sources */,
+				F9C672BA0CD66B20B40232C2 /* SettingsWindow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

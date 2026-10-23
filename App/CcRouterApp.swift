@@ -11,5 +11,11 @@ struct CcRouterApp: App {
             GatewayPopover(model: model)
         }
         .menuBarExtraStyle(.window)
+
+        // 设置窗口（任务 07）：独立窗口，从 popover「设置…」打开。
+        Window("cc-router 设置", id: "settings") {
+            SettingsWindow(model: model)
+        }
+        .defaultSize(width: 680, height: 540)
     }
 }

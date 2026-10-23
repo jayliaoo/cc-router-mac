@@ -2,6 +2,16 @@ import CcRouterCore
 import Foundation
 import Observation
 
+/// 设置窗口一次「保存」的结果（AppModel → 设置 UI，任务 07）。
+enum SettingsSaveOutcome {
+    /// 已落盘并热生效；监听地址/端口变更时已用新配置重启 listener。
+    case saved
+    /// ConfigStore 校验拒绝：未落盘、内存快照未变；`errors` 供 UI 一次性标红定位。
+    case rejected([ConfigValidationError])
+    /// 落盘 IO 失败：配置与内存快照未变。
+    case failed(String)
+}
+
 /// App 壳的生命周期编排（design「2.2 App 生命周期」+「5.3 监听生命周期」）：
 /// 唯一职责是把 popover 的开关动作翻译为 ConfigStore.save（持久化 + 热生效）
 /// 与 GatewayServer start/stop；网关与路由逻辑全部在核心包内。
@@ -122,6 +132,60 @@ final class AppModel {
             errorMessage = "配置保存失败：\n" + error.errors.map(\.description).joined(separator: "\n")
         } catch {
             errorMessage = "配置保存失败：\(error.localizedDescription)"
+        }
+    }
+
+    // MARK: 设置窗口（任务 07）
+
+    /// 设置窗口的统一保存入口：Provider 增删改排序与监听地址端口都走这里。
+    /// 校验拒绝 → 返回 `.rejected`（配置与内存快照不变）；校验通过 → 落盘热生效；
+    /// 监听配置有变 → 用新地址重启 listener，起不来 → 报错 + 主开关回落 off
+    /// （design 5.3，沿用任务 06 的报错通道）。
+    func applySettings(providers: [Provider], listen: ListenConfig) async -> SettingsSaveOutcome {
+        let listenChanged = listen != snapshot.listen
+        let providersChanged = providers != snapshot.providers
+        guard listenChanged || providersChanged else { return .saved }
+
+        let newSnapshot = ConfigSnapshot(
+            schemaVersion: snapshot.schemaVersion,
+            gatewayEnabled: snapshot.gatewayEnabled,
+            listen: listen,
+            providers: providers
+        )
+        do {
+            try await configStore.save(newSnapshot)
+        } catch let error as ConfigStore.SaveError {
+            return .rejected(error.errors)
+        } catch {
+            let message = "配置保存失败：\(error.localizedDescription)"
+            errorMessage = message
+            return .failed(message)
+        }
+        snapshot = newSnapshot
+        errorMessage = nil
+        if listenChanged {
+            await restartListener()
+        }
+        return .saved
+    }
+
+    /// 监听地址/端口变更后的重启（design 5.3）：旧 listener 停止后在途请求自然走完，
+    /// 新请求按新地址走新 listener。新端口起不来（如被占用）→ 明确报错 +
+    /// 主开关回落 off，并让盘上状态与实际一致。
+    private func restartListener() async {
+        guard gatewayRunning else { return }
+        do {
+            try await server.stop()
+        } catch {
+            // stop 幂等失败不妨碍随后以新配置重新 start 的尝试，先行记录。
+            errorMessage = "网关停止失败：\(error.localizedDescription)"
+        }
+        do {
+            _ = try await server.start()
+        } catch {
+            gatewayRunning = false
+            errorMessage = Self.startFailureMessage(listen: snapshot.listen, error: error)
+            await persist(gatewayEnabled: false)
         }
     }
 

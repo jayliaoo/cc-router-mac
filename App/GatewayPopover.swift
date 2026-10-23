@@ -3,9 +3,10 @@ import CcRouterCore
 import SwiftUI
 
 /// 菜单栏 popover：网关主开关（启停）+ Provider 列表（名称 + 各自启用开关），
-/// 外加启动/保存错误的明示区与退出按钮。设置窗口属任务 07，此处不做。
+/// 外加启动/保存错误的明示区与退出按钮；「设置…」打开设置窗口（任务 07）。
 struct GatewayPopover: View {
     @State var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -42,6 +43,10 @@ struct GatewayPopover: View {
             Divider()
 
             HStack {
+                Button("设置…") {
+                    openWindow(id: "settings")
+                }
+                .font(.caption)
                 Spacer()
                 Button("退出") {
                     NSApplication.shared.terminate(nil)
