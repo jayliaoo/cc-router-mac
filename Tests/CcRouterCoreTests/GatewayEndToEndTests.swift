@@ -1,4 +1,5 @@
 import AsyncHTTPClient
+import Foundation
 import Hummingbird
 import NIOCore
 import NIOHTTP1
@@ -24,13 +25,28 @@ struct GatewayFixture {
             models: ["claude-test-model"],
             enabled: true
         )
-        let gateway = GatewayServer(address: "127.0.0.1", port: 0, provider: provider)
+        let gateway = GatewayServer(configStore: makeConfigStore(providers: [provider], port: 0))
         let gatewayPort = try await gateway.start()
         return GatewayFixture(
             upstream: upstream,
             gateway: gateway,
             gatewayPort: gatewayPort,
             client: HTTPClient(eventLoopGroupProvider: .singleton)
+        )
+    }
+
+    /// 网关配置来源：临时目录里的 ConfigStore 快照（不写盘，纯内存使用）。
+    static func makeConfigStore(providers: [Provider], port: Int) -> ConfigStore {
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cc-router-gateway-tests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("config.json")
+        return ConfigStore(
+            fileURL: fileURL,
+            snapshot: ConfigSnapshot(
+                gatewayEnabled: true,
+                listen: ListenConfig(address: "127.0.0.1", port: port),
+                providers: providers
+            )
         )
     }
 
@@ -178,12 +194,12 @@ struct GatewayEndToEndTests {
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
         do {
             // 先用端口 0 让系统分配一个实际端口
-            let probe = GatewayServer(address: "127.0.0.1", port: 0, provider: provider)
+            let probe = GatewayServer(configStore: GatewayFixture.makeConfigStore(providers: [provider], port: 0))
             let port = try await probe.start()
             try await probe.stop()
 
             // 用显式端口重复起停同一个网关实例
-            let gateway = GatewayServer(address: "127.0.0.1", port: port, provider: provider)
+            let gateway = GatewayServer(configStore: GatewayFixture.makeConfigStore(providers: [provider], port: port))
             let boundPort = try await gateway.start()
             #expect(boundPort == port)
             try await gateway.stop()
