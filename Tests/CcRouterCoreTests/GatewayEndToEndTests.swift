@@ -109,4 +109,31 @@ struct GatewayEndToEndTests {
         }
         try await fixture.shutdown()
     }
+
+    @Test("鉴权头替换：客户端 key 不外泄，上游收到配置的 apiKey")
+    func replacesAuthHeaders() async throws {
+        let fixture = try await GatewayFixture.start(upstreamResponse: UpstreamResponse())
+        do {
+            _ = try await fixture.post(
+                "/v1/messages",
+                headers: [
+                    ("content-type", "application/json"),
+                    ("x-api-key", "client-secret-key"),
+                    ("authorization", "Bearer client-bearer-token"),
+                ],
+                body: #"{"model":"claude-test-model","messages":[]}"#
+            )
+
+            let received = await fixture.upstream.lastRequest()
+            #expect(firstValue(of: "x-api-key", in: received.headers) == "upstream-configured-key")
+            #expect(firstValue(of: "authorization", in: received.headers) == nil)
+            let headerValues = received.headers.map(\.value)
+            #expect(!headerValues.contains("client-secret-key"))
+            #expect(!headerValues.contains { $0.contains("client-bearer-token") })
+        } catch {
+            try? await fixture.shutdown()
+            throw error
+        }
+        try await fixture.shutdown()
+    }
 }

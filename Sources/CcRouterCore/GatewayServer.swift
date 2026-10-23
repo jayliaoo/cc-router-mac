@@ -150,7 +150,7 @@ public actor GatewayServer {
 
         var upstream = HTTPClientRequest(url: provider.baseUrl + "/v1/messages")
         upstream.method = .POST
-        upstream.headers = forwardedHeaders(from: request.headers)
+        upstream.headers = forwardedHeaders(from: request.headers, apiKey: provider.apiKey)
         upstream.body = .bytes(body)
         let response = try await httpClient.execute(upstream, deadline: .distantFuture)
 
@@ -166,14 +166,18 @@ public actor GatewayServer {
         )
     }
 
-    /// 转发请求头：原样透传，剔除逐跳头与由 HTTP 客户端自行管理的头。
-    private static func forwardedHeaders(from headers: HTTPFields) -> HTTPHeaders {
+    /// 转发请求头：原样透传，仅鉴权头（`x-api-key` / `authorization`）替换为
+    /// 命中 Provider 的 apiKey（客户端自己的 key 不外泄），并剔除逐跳头与
+    /// 由 HTTP 客户端自行管理的头。
+    private static func forwardedHeaders(from headers: HTTPFields, apiKey: String) -> HTTPHeaders {
         var forwarded = HTTPHeaders()
         for field in headers {
             let name = field.name.description
-            guard !Self.hopByHopNames.contains(name.lowercased()) else { continue }
+            let lowered = name.lowercased()
+            guard !Self.hopByHopNames.contains(lowered), lowered != "x-api-key", lowered != "authorization" else { continue }
             forwarded.replaceOrAdd(name: name, value: field.value)
         }
+        forwarded.replaceOrAdd(name: "x-api-key", value: apiKey)
         return forwarded
     }
 
