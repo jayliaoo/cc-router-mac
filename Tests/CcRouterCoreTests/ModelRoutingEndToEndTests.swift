@@ -156,12 +156,12 @@ struct ModelRoutingEndToEndTests {
 
             let receivedA = await fixture.upstreams[0].stub.lastRequest()
             #expect(receivedA.body == ByteBuffer(string: bodyA))
-            #expect(firstValue(of: "x-api-key", in: receivedA.headers) == "upstream-key-0")
+            #expect(firstValue(of: "authorization", in: receivedA.headers) == "Bearer upstream-key-0")
 
             let responseB = try await fixture.postMessages(model: "model-b")
             #expect(responseB.status == .ok)
             #expect(responseB.body == #"{"id":"from-b"}"#)
-            #expect(firstValue(of: "x-api-key", in: await fixture.upstreams[1].stub.lastRequest().headers) == "upstream-key-1")
+            #expect(firstValue(of: "authorization", in: await fixture.upstreams[1].stub.lastRequest().headers) == "Bearer upstream-key-1")
         } catch {
             try? await fixture.shutdown()
             throw error

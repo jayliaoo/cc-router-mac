@@ -52,7 +52,7 @@ struct CountTokensModelsEndToEndTests {
             #expect(received.method == "POST")
             #expect(received.uri == "/v1/messages/count_tokens")
             #expect(received.body == ByteBuffer(string: bodyA))
-            #expect(firstValue(of: "x-api-key", in: received.headers) == "upstream-key-0")
+            #expect(firstValue(of: "authorization", in: received.headers) == "Bearer upstream-key-0")
         } catch {
             try? await fixture.shutdown()
             throw error

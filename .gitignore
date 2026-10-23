@@ -5,6 +5,9 @@
 ## User settings
 xcuserdata/
 
+# 命令行构建产物（README 生产构建命令的 -derivedDataPath）
+build/
+
 ## Obj-C/Swift specific
 *.hmap
 

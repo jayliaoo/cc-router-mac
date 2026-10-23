@@ -140,10 +140,12 @@ enum GatewayRouter {
         return object["model"] as? String
     }
 
-    /// 转发请求头：原样透传，仅鉴权头（`x-api-key` / `authorization`）替换为
-    /// 命中 Provider 的 apiKey（客户端自己的 key 不外泄），并剔除逐跳头与
-    /// 由 HTTP 客户端自行管理的头。同名多值头（如两条 `anthropic-beta`）
-    /// 用追加语义逐条保留——`replaceOrAdd` 会只剩最后一个值。
+    /// 转发请求头：原样透传，仅鉴权头替换为命中 Provider 的 apiKey
+    /// （客户端自己的 key 不外泄）——ANTHROPIC_AUTH_TOKEN 兼容模式：统一以
+    /// `Authorization: Bearer <apiKey>` 发给上游，客户端原有的 `x-api-key` /
+    /// `authorization` 一律剔除。并剔除逐跳头与由 HTTP 客户端自行管理的头。
+    /// 同名多值头（如两条 `anthropic-beta`）用追加语义逐条保留——
+    /// `replaceOrAdd` 会只剩最后一个值。
     static func forwardedHeaders(from headers: HTTPFields, apiKey: String) -> HTTPHeaders {
         var forwarded = HTTPHeaders()
         for field in headers {
@@ -152,7 +154,7 @@ enum GatewayRouter {
             guard !Self.hopByHopNames.contains(lowered), lowered != "x-api-key", lowered != "authorization" else { continue }
             forwarded.add(name: name, value: field.value)
         }
-        forwarded.replaceOrAdd(name: "x-api-key", value: apiKey)
+        forwarded.replaceOrAdd(name: "authorization", value: "Bearer \(apiKey)")
         return forwarded
     }
 
