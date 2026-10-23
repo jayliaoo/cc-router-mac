@@ -6,8 +6,9 @@ import NIOCore
 import NIOHTTP1
 
 /// 网关路由模块（design「3 接口设计」）：把 Hummingbird Router 组装成网关的对外端点。
-/// 任务 03 范围：`POST /v1/messages` 转发 + 其余一切路径/方法组合的 404 `not_found_error`；
-/// `count_tokens`、`/v1/models` 由后续任务在本模块上扩展。
+/// 端点：`POST /v1/messages`（转发）、`POST /v1/messages/count_tokens`（透传 + 失败兜底）、
+/// `GET /v1/models`（本地聚合）——次要端点见 `SecondaryEndpoints.swift`；
+/// 其余一切路径/方法组合 404 `not_found_error`。
 enum GatewayRouter {
     /// 在给定的 Hummingbird Router 上注册网关全部端点。
     /// 白名单守卫加在最前（design 3.1 生命周期第一步）：白名单外的请求
@@ -20,6 +21,12 @@ enum GatewayRouter {
         router.add(middleware: PathWhitelistMiddleware())
         router.post("v1/messages") { request, _ in
             try await Self.proxy(request, store: configStore, using: httpClient)
+        }
+        router.post("v1/messages/count_tokens") { request, _ in
+            try await Self.countTokens(request, store: configStore, using: httpClient)
+        }
+        router.get("v1/models") { _, _ in
+            try await Self.modelsList(store: configStore)
         }
     }
 
@@ -56,38 +63,12 @@ enum GatewayRouter {
         var fields = HTTPFields()
         for (name, value) in response.headers {
             guard let name = HTTPField.Name(name) else { continue }
-            let lowered = name.description.lowercased()
-            guard !Self.responseHopByHopNames.contains(lowered) else { continue }
             fields.append(.init(name: name, value: value))
         }
-
-        // 首字节边界（design 5.2）：Hummingbird 在 handler 返回 Response 的瞬间
-        // 就把响应头写给客户端，之后再无法改写状态码。因此先读到上游响应体的
-        // 第一段再提交响应——上游若在首字节前失败（连接失败、停滞超时、回了
-        // 响应头就断开），此刻还能完整转写 502；一旦开始写出就只能断开连接。
-        var upstreamIterator = response.body.makeAsyncIterator()
-        let firstChunk: ByteBuffer?
-        do {
-            firstChunk = try await upstreamIterator.next()
-        } catch {
-            return try Self.apiError(
-                message: "Provider「\(provider.name)」的上游在响应首字节前中断（\(provider.baseUrl)）"
-            )
-        }
-        guard let firstChunk else {
-            // 上游响应体为空：原样回空体。
-            return Response(status: HTTPResponse.Status(code: Int(response.status.code)), headers: fields)
-        }
-
-        // 上游响应体剩余分段逐段接进 Hummingbird 流式响应（contentLength 为
-        // nil 走 chunked，design 5.2）：不聚合、不改写、不掐断。
         return Response(
             status: HTTPResponse.Status(code: Int(response.status.code)),
             headers: fields,
-            body: .init(asyncSequence: FirstChunkThenUpstreamBody(
-                first: firstChunk,
-                rest: .init(iterator: upstreamIterator)
-            ))
+            body: .init(asyncSequence: response.body)
         )
     }
 
@@ -107,7 +88,7 @@ enum GatewayRouter {
         try errorResponse(
             status: .notFound,
             type: "not_found_error",
-            message: "未识别的路径或方法：网关仅支持 POST /v1/messages"
+            message: "未识别的路径或方法：网关仅支持 POST /v1/messages、POST /v1/messages/count_tokens、GET /v1/models"
         )
     }
 
@@ -167,69 +148,6 @@ enum GatewayRouter {
         "transfer-encoding",
         "upgrade",
     ]
-
-    /// 响应方向的逐跳头（RFC 9110 §7.6.1）：描述的是上游↔网关这一跳的连接语义，
-    /// 透传给客户端会错误影响网关↔客户端连接（如上游的 `connection: close` 会
-    /// 提前掐断客户端连接）。content-length 属于实体描述、长度与透传体一致，保留。
-    private static let responseHopByHopNames: Set<String> = [
-        "connection",
-        "keep-alive",
-        "proxy-connection",
-        "proxy-authenticate",
-        "te",
-        "trailer",
-        "transfer-encoding",
-        "upgrade",
-    ]
-}
-
-/// 首字节边界（design 5.2）用的拼接序列：把 `GatewayRouter.proxy` 预读出的
-/// 上游首段与尚未消费的上游迭代器拼成一条流，整体接进 Hummingbird 的
-/// `ResponseBody(asyncSequence:)` chunked 写出。
-private struct FirstChunkThenUpstreamBody: AsyncSequence, Sendable {
-    typealias Element = ByteBuffer
-
-    private let first: ByteBuffer
-    private let rest: UpstreamIteratorBox
-
-    init(first: ByteBuffer, rest: UpstreamIteratorBox) {
-        self.first = first
-        self.rest = rest
-    }
-
-    struct AsyncIterator: AsyncIteratorProtocol {
-        private var first: ByteBuffer?
-        private let rest: UpstreamIteratorBox
-
-        init(first: ByteBuffer?, rest: UpstreamIteratorBox) {
-            self.first = first
-            self.rest = rest
-        }
-
-        mutating func next() async throws -> ByteBuffer? {
-            if let chunk = self.first {
-                self.first = nil
-                return chunk
-            }
-            return try await self.rest.iterator?.next()
-        }
-    }
-
-    func makeAsyncIterator() -> AsyncIterator {
-        AsyncIterator(first: self.first, rest: self.rest)
-    }
-}
-
-/// `HTTPClientResponse.Body.AsyncIterator` 被 AsyncHTTPClient 刻意标为非
-/// Sendable（迭代器持流内可变状态）。网关的用法是严格单次的：proxy 预读
-/// 首段后，迭代器只在 Hummingbird 响应写出闭包里被单任务顺序消费、独占
-/// 使用、从不并发共享，因此用 unchecked 装箱安全地穿过 Sendable 边界。
-private final class UpstreamIteratorBox: @unchecked Sendable {
-    var iterator: HTTPClientResponse.Body.AsyncIterator?
-
-    init(iterator: HTTPClientResponse.Body.AsyncIterator) {
-        self.iterator = iterator
-    }
 }
 
 /// 白名单守卫（design「3.1」代理路径生命周期第一步）：
@@ -245,6 +163,8 @@ struct PathWhitelistMiddleware: MiddlewareProtocol {
     /// 网关白名单："METHOD /path"。
     static let whitelisted: Set<String> = [
         "POST /v1/messages",
+        "POST /v1/messages/count_tokens",
+        "GET /v1/models",
     ]
 
     func handle(
