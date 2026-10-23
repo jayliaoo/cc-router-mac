@@ -136,4 +136,75 @@ struct GatewayEndToEndTests {
         }
         try await fixture.shutdown()
     }
+
+    @Test("POST /v1/messages?beta=true 与无查询参数同路由")
+    func toleratesQueryParameters() async throws {
+        let upstreamBody = #"{"id":"msg_beta"}"#
+        let fixture = try await GatewayFixture.start(upstreamResponse: UpstreamResponse(
+            status: .ok,
+            headers: [("content-type", "application/json")],
+            body: upstreamBody
+        ))
+        do {
+            let response = try await fixture.post(
+                "/v1/messages?beta=true",
+                headers: [("content-type", "application/json")],
+                body: #"{"model":"claude-test-model","messages":[]}"#
+            )
+            #expect(response.status == .ok)
+            #expect(response.body == upstreamBody)
+
+            let received = await fixture.upstream.lastRequest()
+            #expect(received.method == "POST")
+        } catch {
+            try? await fixture.shutdown()
+            throw error
+        }
+        try await fixture.shutdown()
+    }
+
+    @Test("网关可重复起停，监听地址端口可指定")
+    func serverCanStartStopRepeatedlyOnExplicitPort() async throws {
+        let upstreamBody = #"{"id":"restart"}"#
+        let upstream = UpstreamStub(response: UpstreamResponse(body: upstreamBody))
+        let upstreamPort = try await upstream.start()
+        let provider = Provider(
+            name: "假上游",
+            baseUrl: "http://127.0.0.1:\(upstreamPort)",
+            apiKey: "upstream-configured-key",
+            models: ["claude-test-model"],
+            enabled: true
+        )
+        let client = HTTPClient(eventLoopGroupProvider: .singleton)
+        do {
+            // 先用端口 0 让系统分配一个实际端口
+            let probe = GatewayServer(address: "127.0.0.1", port: 0, provider: provider)
+            let port = try await probe.start()
+            try await probe.stop()
+
+            // 用显式端口重复起停同一个网关实例
+            let gateway = GatewayServer(address: "127.0.0.1", port: port, provider: provider)
+            let boundPort = try await gateway.start()
+            #expect(boundPort == port)
+            try await gateway.stop()
+            try await gateway.start()
+
+            var request = HTTPClientRequest(url: "http://127.0.0.1:\(port)/v1/messages")
+            request.method = .POST
+            request.headers.replaceOrAdd(name: "content-type", value: "application/json")
+            request.body = .bytes(ByteBuffer(string: #"{"model":"claude-test-model","messages":[]}"#))
+            let response = try await client.execute(request, timeout: .seconds(30))
+            var buffer = try await response.body.collect(upTo: 1024 * 1024)
+            #expect(response.status == .ok)
+            #expect(String(buffer: buffer) == upstreamBody)
+
+            try await gateway.stop()
+        } catch {
+            try? await upstream.stop()
+            try? await client.shutdown()
+            throw error
+        }
+        try await upstream.stop()
+        try await client.shutdown()
+    }
 }
