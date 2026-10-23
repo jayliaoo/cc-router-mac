@@ -76,7 +76,31 @@ final class AppModel {
 
     // MARK: 主开关
 
+    /// 主开关的在途意图保护：`server.start()` / `server.stop()` 挂起期间
+    /// MainActor 可重入（popover 开关每次点击都起一个 Task）。快速连点开→关
+    /// 时，后到意图在这里登记、由在途操作收尾后接续执行（后到胜出），保证
+    /// 最终的运行状态与落盘值始终与用户最后一次操作一致。
+    private var latestGatewayIntent: Bool?
+    private var gatewayMutationInFlight = false
+
     func setGateway(_ on: Bool) async {
+        if gatewayMutationInFlight {
+            latestGatewayIntent = on
+            return
+        }
+        gatewayMutationInFlight = true
+        defer { gatewayMutationInFlight = false }
+        await applyGateway(on)
+        // 在途期间用户可能又点了开关：依次执行后到意图，直到没有新意图。
+        // while 条件失败到 defer 落地之间无 await，MainActor 上不存在再插入
+        // 新意图的窗口。
+        while let next = latestGatewayIntent {
+            latestGatewayIntent = nil
+            await applyGateway(next)
+        }
+    }
+
+    private func applyGateway(_ on: Bool) async {
         if on {
             await enableGateway()
         } else {
