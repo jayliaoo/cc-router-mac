@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **cc-router-mac**：一个 macOS 原生应用（SwiftUI），作为 **Anthropic Messages API 格式的网关**，供 Claude Code 等客户端把 `ANTHROPIC_BASE_URL` 指向本网关使用。
 
-核心需求（来自项目发起人，尚未实现）：
+核心需求（来自项目发起人）：
 
 - **只做聚合，不做协议转换**：所有上游 provider 本身就是 Anthropic 兼容格式（如 Anthropic 官方、第三方 Anthropic 兼容端点）。网关不改写请求/响应体、不改写 `model` 名，只替换鉴权头（`x-api-key`/`authorization`）为命中 provider 的 key，其余 headers 原样透传。
 - **多个 provider 聚合成一个端点**：provider = { 名称, base_url, api_key, 模型列表, 启用开关, 顺序 }，单 provider 单 key。路由采用**模型归属路由**（术语见 CONTEXT.md）：按请求 `model` 精确匹配；同一模型不允许被多个 provider 声明（保存配置时全局校验拒绝，不看启用状态）；模型列表不允许留空；未命中返回 Anthropic 格式 404 `model_not_found`。
@@ -32,7 +32,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - 运行/手测：Xcode GUI 打开 `cc-router-mac.xcodeproj` 直接 Run（本机签名自动处理）；UI 无自动化测试，按任务文件手测
 - **依赖**：Hummingbird 2.x（server）、AsyncHTTPClient（上游 client）、SwiftNIO（`Package.resolved` 已锁定）；App 壳经本地包引用产品 `CcRouterCore`，壳内只有 UI 与生命周期编排
 - **最低平台**：macOS 14 —— Hummingbird 2.28 的 API 经其 availability macro 要求 macOS 14（spec 曾定 macOS 13，见 ADR-0001 与 Package.swift 注释）
-- App 壳（SwiftUI `MenuBarExtra`，`LSUIElement` 不进 Dock）位于 `App/`，入口 `App/CcRouterApp.swift`；provider 编辑设置窗口尚未实现（任务 07）。
+- App 壳（SwiftUI `MenuBarExtra`，`LSUIElement` 不进 Dock）位于 `App/`，入口 `App/CcRouterApp.swift`；provider 编辑设置窗口已实现（`App/SettingsWindow.swift`：provider 列表排序、表单编辑、api_key 掩码、校验标红、监听地址端口修改）。
 
 ## 注意事项
 

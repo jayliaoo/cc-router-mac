@@ -27,11 +27,11 @@ Claude Code 等客户端一次只能配一个 base URL 和一个 API key，用�
 | HTTP server | Hummingbird 2.x                   | 官方 proxy-server 示例与需求对应；流式原生；见 ADR-0001 |
 | 上游 client | AsyncHTTPClient                   | 与 server 侧 ByteBuffer 流式一一对应；见 ADR-0001    |
 | 进程形态   | 内嵌菜单栏 app 进程                | 免 IPC 与双份状态；见 ADR-0002                       |
-| UI         | SwiftUI `MenuBarExtra` + 设置窗口 | macOS 13+ 原生菜单栏 popover                         |
+| UI         | SwiftUI `MenuBarExtra` + 设置窗口 | macOS 14+ 原生菜单栏 popover（最低系统随技术栈定为 macOS 14，发起人已确认） |
 | 持久化     | Application Support 下单 JSON 文件 | 结构化配置、原子写、可人工检查                        |
-| 登录自启   | SMAppService.mainApp              | 系统标准 Login Item API（macOS 13+）                 |
+| 登录自启   | SMAppService.mainApp              | 系统标准 Login Item API（macOS 14+）                  |
 | 构建结构   | 核心 SPM 包 + Xcode 薄壳工程        | 核心逻辑可 `swift test` 直测，不依赖 Xcode 启动        |
-| 最低系统   | macOS 13                          | MenuBarExtra/SMAppService 下限；本机 macOS 27 / Xcode 27.1 为第一验证环境 |
+| 最低系统   | macOS 14                          | Hummingbird 2.28 的 availability macro 要求 macOS 14（发起人已确认放弃 macOS 13，见 ADR-0001 与 Package.swift 注释；本机 macOS 27 / Xcode 27.1 为第一验证环境） |
 
 # 2 架构设计
 
@@ -97,6 +97,7 @@ sequenceDiagram
 - **路径前缀**：`/v1`；查询参数（`?beta=true`、`?limit=1000` 等）一律忽略，路径与查询的组合按同一路由处理。
 - **认证**：网关不校验客户端凭据（任意 key 放行）。
 - **请求头**：原样透传，仅将 `x-api-key` / `authorization` 替换为命中 Provider 的 apiKey；客户端自己的 key 不外泄。
+- **响应头**：原样透传，但剔除逐跳头（`connection`、`transfer-encoding`、`keep-alive` 等，RFC 9110 §7.6.1）——它们描述的是上游↔网关这一跳的连接语义，透传会错误影响网关↔客户端连接；`content-length` 属实体描述、与透传体长度一致，保留。
 - **报文体**：请求体与响应体均不改写（含 `model` 名）。
 - **错误体**：Anthropic error 格式 `{"type":"error","error":{"type":"...","message":"..."}}`。
 - **未识别路径**：404 `not_found_error`。
@@ -147,7 +148,7 @@ flowchart TB
 
 ### `POST /v1/messages/count_tokens` — token 计数转发
 
-请求原样转发给命中的 Provider。上游返回 2xx 时原样透传；**连接失败或任何非 2xx** 时，网关直接返回 `200` 与 `{"input_tokens": 0}`（访谈 Q22 敲定的兜底，保证客户端 token 估算永不阻塞）。
+请求原样转发给命中的 Provider。上游返回 2xx 时原样透传；**连接失败或任何非 2xx** 时，网关直接返回 `200` 与 `{"input_tokens": 0}`（访谈 Q22 敲定的兜底，保证客户端 token 估算永不阻塞）。2xx 响应体不流式：整体读入（上限 1MB）后原样回给客户端，读取失败/中断（含超上限）同样走兜底——上游 2xx 中途断开时客户端收兜底而非断连。
 
 ### `GET /v1/models` — 聚合模型列表
 
@@ -247,6 +248,6 @@ flowchart TB
 # 7 非功能与上线
 
 - **安全**：默认仅绑定 `127.0.0.1`；不校验客户端凭据；apiKey 明文存 `0600` 文件（见 4.1 决策）；无公网暴露面。
-- **兼容性**：macOS 13+ 运行；开发与验证环境为本机 macOS 27 / Xcode 27.1 / Swift 6.4（Hummingbird 2.28 要求 Swift 6.2+ 工具链，已满足）。
+- **兼容性**：macOS 14+ 运行（发起人已确认：Hummingbird 2.28 的 availability macro 要求 macOS 14，放弃 spec 原定的 macOS 13，见 ADR-0001 与 Package.swift 注释）；开发与验证环境为本机 macOS 27 / Xcode 27.1 / Swift 6.4（Hummingbird 2.28 要求 Swift 6.2+ 工具链，已满足）。
 - **可观测**：spec 范围外不做日志功能；仅保留最小 os_log 排障日志（启动、监听失败、上游连接失败）。
 - **分发**：个人工具，直接本地构建运行（.app bundle），无商店/公证流程要求。
