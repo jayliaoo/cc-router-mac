@@ -5,6 +5,10 @@ import NIOConcurrencyHelpers
 import NIOCore
 import NIOHTTP1
 
+/// 假上游「流中途断开」的信号：Response 头已写出后抛出，
+/// Hummingbird 无法回收已开始的响应，只能断开连接。
+struct UpstreamAbortError: Error {}
+
 /// A request received by the fake upstream.
 struct UpstreamRecordedRequest: Sendable {
     let method: String
@@ -20,6 +24,11 @@ struct UpstreamResponse: Sendable {
     var body: String = #"{"type":"message"}"#
     /// 记录请求后、返回响应前的人工延迟，用于构造「在途请求」。
     var delay: Duration? = nil
+    /// 分段发送的响应体（设置后优先于 body）：每段附带发送前的人工延迟，
+    /// 用于以受控节奏模拟 SSE 逐段输出（任务 04 seam 约定）。
+    var chunks: [(data: String, delay: Duration?)]? = nil
+    /// 发送完全部 chunks 后不断开正常收尾而是直接失败，模拟上游流中途挂掉。
+    var abortAfterChunks: Bool = false
 }
 
 /// Fake Anthropic-compatible upstream: a real in-process HTTP server that
@@ -56,6 +65,24 @@ final class UpstreamStub: @unchecked Sendable {
             for (name, value) in response.headers {
                 guard let name = HTTPField.Name(name) else { continue }
                 fields.append(.init(name: name, value: value))
+            }
+            if let chunks = response.chunks {
+                // 分段响应：逐段写出，段间遵守人为延迟；可选地在末尾直接失败
+                // 模拟上游流中途断开（Response 头已写出后无法回收，连接随之断掉）。
+                let abortAfterChunks = response.abortAfterChunks
+                let body = ResponseBody(contentLength: nil) { writer in
+                    for chunk in chunks {
+                        if let delay = chunk.delay {
+                            try await Task.sleep(for: delay)
+                        }
+                        try await writer.write(ByteBuffer(string: chunk.data))
+                    }
+                    if abortAfterChunks {
+                        throw UpstreamAbortError()
+                    }
+                    try await writer.finish(nil)
+                }
+                return Response(status: response.status, headers: fields, body: body)
             }
             return Response(status: response.status, headers: fields, body: .init(byteBuffer: ByteBuffer(string: response.body)))
         }

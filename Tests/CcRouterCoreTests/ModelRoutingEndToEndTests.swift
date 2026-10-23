@@ -25,7 +25,8 @@ struct RoutingFixture {
 
     /// 每个 spec 启动一个假上游，并生成对应的 Provider（第 i 个 spec 的模型归属第 i 个上游）。
     static func start(
-        providerSpecs: [(response: UpstreamResponse, models: [String], enabled: Bool)]
+        providerSpecs: [(response: UpstreamResponse, models: [String], enabled: Bool)],
+        httpClientConfiguration: HTTPClient.Configuration? = nil
     ) async throws -> RoutingFixture {
         var upstreams: [Upstream] = []
         var providers: [Provider] = []
@@ -41,13 +42,24 @@ struct RoutingFixture {
                 enabled: spec.enabled
             ))
         }
-        return try await self.start(providers: providers, upstreams: upstreams)
+        return try await self.start(
+            providers: providers,
+            upstreams: upstreams,
+            httpClientConfiguration: httpClientConfiguration
+        )
     }
 
     /// 直接给定 Provider 列表（无上游或外部构造 baseUrl 时用）。
-    static func start(providers: [Provider], upstreams: [Upstream] = []) async throws -> RoutingFixture {
+    static func start(
+        providers: [Provider],
+        upstreams: [Upstream] = [],
+        httpClientConfiguration: HTTPClient.Configuration? = nil
+    ) async throws -> RoutingFixture {
         let configStore = GatewayFixture.makeConfigStore(providers: providers, port: 0)
-        let gateway = GatewayServer(configStore: configStore)
+        let gateway = GatewayServer(
+            configStore: configStore,
+            httpClientConfiguration: httpClientConfiguration
+        )
         let gatewayPort = try await gateway.start()
         return RoutingFixture(
             upstreams: upstreams,
@@ -99,6 +111,19 @@ struct RoutingFixture {
     /// POST /v1/messages，请求体只带指定 model。
     func postMessages(model: String) async throws -> (status: HTTPResponseStatus, body: String) {
         try await self.request(.POST, "/v1/messages", body: #"{"model":"\#(model)","messages":[]}"#)
+    }
+
+    /// POST /v1/messages，返回未消费的流式响应（body 由调用方逐段读取），
+    /// 用于断言 SSE 的渐进到达与连接终止行为（任务 04 seam 约定）。
+    func streamMessages(
+        model: String,
+        timeout: TimeAmount = .seconds(30)
+    ) async throws -> HTTPClientResponse {
+        var request = HTTPClientRequest(url: "http://127.0.0.1:\(self.gatewayPort)/v1/messages")
+        request.method = .POST
+        request.headers.replaceOrAdd(name: "content-type", value: "application/json")
+        request.body = .bytes(ByteBuffer(string: #"{"model":"\#(model)","messages":[]}"#))
+        return try await self.client.execute(request, timeout: timeout)
     }
 }
 
