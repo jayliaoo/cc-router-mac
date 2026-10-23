@@ -4,7 +4,7 @@
 
 **阻塞于：** 03（路由与转发管线已就绪）。
 
-**状态：** 进行中
+**状态：** 完成
 
 ## 上下文
 
@@ -35,9 +35,9 @@
 
 ## 验收标准
 
-- [ ] 端到端：count_tokens 请求路由到正确上游、响应原样透传（含 `?beta=true` 变体）
-- [ ] 端到端：count_tokens 上游连接失败 → `200` + `{"input_tokens": 0}`
-- [ ] 端到端：count_tokens 上游返回 401/429/500（非 2xx）→ `200` + `{"input_tokens": 0}`
-- [ ] 端到端：count_tokens 未命中模型 → 404 `model_not_found`（兜底不吞路由错误）
-- [ ] 端到端：`GET /v1/models` 与 `GET /v1/models?limit=1000` 返回聚合列表——只含启用 Provider 的模型、按名升序、字段形态符合上方 JSON、禁用 Provider 的模型不出现
-- [ ] 端到端：全部 Provider 禁用 → `data: []`、`first_id`/`last_id` 为 `null`、`has_more: false`
+- [x] 端到端：count_tokens 请求路由到正确上游、响应原样透传（含 `?beta=true` 变体）
+- [x] 端到端：count_tokens 上游连接失败 → `200` + `{"input_tokens": 0}`
+- [x] 端到端：count_tokens 上游返回 401/429/500（非 2xx）→ `200` + `{"input_tokens": 0}`
+- [x] 端到端：count_tokens 未命中模型 → 404 `model_not_found`（兜底不吞路由错误）
+- [x] 端到端：`GET /v1/models` 与 `GET /v1/models?limit=1000` 返回聚合列表——只含启用 Provider 的模型、按名升序、字段形态符合上方 JSON、禁用 Provider 的模型不出现
+- [x] 端到端：全部 Provider 禁用 → `data: []`、`first_id`/`last_id` 为 `null`、`has_more: false`
