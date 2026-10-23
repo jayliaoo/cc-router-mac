@@ -22,13 +22,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **监听**：默认 `127.0.0.1:8317`，地址/端口可在设置修改，保存后重启监听，占用时明确报错。
 ## 仓库现状
 
-仓库处于初始状态（仅 LICENSE / README / .gitignore），尚无构建、测试、lint 命令。技术栈预期为：
+已有核心 SPM 包（仓库根 `Package.swift`，产品名 `CcRouterCore`），无 lint 配置：
 
-- **语言/框架**：Swift + SwiftUI（原生 macOS 应用）
-- **依赖管理**：Swift Package Manager（`.build/` 已在 .gitignore 中）
-- 项目可能包含 Xcode 工程文件（`*.xcodeproj` 目前**未**被 .gitignore 忽略）
-
-引入构建系统（SPM `Package.swift` 或 Xcode 工程）后，请更新本节，补充构建、运行、测试命令（例如 `swift build`、`swift test`、`xcodebuild test` 等）。
+- **构建**：`swift build`
+- **测试**：`swift test`（全部测试位于核心包内，HTTP 端到端 seam：进程内假 Anthropic 上游 + 网关 + 真 HTTP 客户端）
+- **依赖**：Hummingbird 2.x（server）、AsyncHTTPClient（上游 client）、SwiftNIO（`Package.resolved` 已锁定）
+- **最低平台**：macOS 14 —— Hummingbird 2.28 的 API 经其 availability macro 要求 macOS 14（spec 曾定 macOS 13，见 ADR-0001 与 Package.swift 注释）
+- 项目可能包含 Xcode 工程文件（`*.xcodeproj` 目前**未**被 .gitignore 忽略）；菜单栏 App 壳（SwiftUI）尚未创建，只做核心 library。
 
 ## 注意事项
 
