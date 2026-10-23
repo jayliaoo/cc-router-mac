@@ -18,6 +18,8 @@ struct UpstreamResponse: Sendable {
     var status: HTTPResponse.Status = .ok
     var headers: [(name: String, value: String)] = [("content-type", "application/json")]
     var body: String = #"{"type":"message"}"#
+    /// 记录请求后、返回响应前的人工延迟，用于构造「在途请求」。
+    var delay: Duration? = nil
 }
 
 /// Fake Anthropic-compatible upstream: a real in-process HTTP server that
@@ -47,6 +49,9 @@ final class UpstreamStub: @unchecked Sendable {
                 body: body
             )
             self?.record(recordedRequest)
+            if let delay = response.delay {
+                try await Task.sleep(for: delay)
+            }
             var fields = HTTPFields()
             for (name, value) in response.headers {
                 guard let name = HTTPField.Name(name) else { continue }
@@ -79,6 +84,11 @@ final class UpstreamStub: @unchecked Sendable {
                 continuation.resume(returning: ready)
             }
         }
+    }
+
+    /// Number of requests recorded so far (no waiting involved).
+    func requestCount() -> Int {
+        self.recorded.withLockedValue { $0.count }
     }
 
     private func record(_ request: UpstreamRecordedRequest) {
