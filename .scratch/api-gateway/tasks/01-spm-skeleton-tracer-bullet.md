@@ -4,7 +4,7 @@
 
 **阻塞于：** 无（可立即开始）。
 
-**状态：** 进行中
+**状态：** 完成
 
 ## 上下文
 
@@ -22,9 +22,9 @@
 
 ## 验收标准
 
-- [ ] `swift build` 与 `swift test` 在仓库根直接可用（核心包 + 测试 target）
-- [ ] 端到端测试：客户端 → 网关 `POST /v1/messages` → 假上游，响应体、响应状态码、响应头原样到达客户端
-- [ ] 端到端测试：客户端自带的 `x-api-key`/`authorization` 不出现在发往上游的请求里，上游收到的是配置的 apiKey
-- [ ] 端到端测试：`POST /v1/messages?beta=true` 与无参数走同一处理
-- [ ] 网关 server 可 start/stop（测试可重复起停），监听地址端口可指定
-- [ ] 无 UI 代码、无 Hummingbird/AHC 之外的第三方依赖
+- [x] `swift build` 与 `swift test` 在仓库根直接可用（核心包 + 测试 target）
+- [x] 端到端测试：客户端 → 网关 `POST /v1/messages` → 假上游，响应体、响应状态码、响应头原样到达客户端
+- [x] 端到端测试：客户端自带的 `x-api-key`/`authorization` 不出现在发往上游的请求里，上游收到的是配置的 apiKey
+- [x] 端到端测试：`POST /v1/messages?beta=true` 与无参数走同一处理
+- [x] 网关 server 可 start/stop（测试可重复起停），监听地址端口可指定
+- [x] 无 UI 代码、无 Hummingbird/AHC 之外的第三方依赖
