@@ -240,6 +240,35 @@ struct ModelRoutingEndToEndTests {
         try await fixture.shutdown()
     }
 
+    @Test("baseUrl 带尾斜杠：规范化拼接，上游收到单斜杠路径（不出现 //v1/messages）")
+    func trailingSlashBaseUrlNormalizedForMessages() async throws {
+        let stub = UpstreamStub(response: UpstreamResponse(body: #"{"id":"from-slash"}"#))
+        let upstreamPort = try await stub.start()
+        let provider = Provider(
+            name: "尾斜杠上游",
+            baseUrl: "http://127.0.0.1:\(upstreamPort)/",
+            apiKey: "slash-key",
+            models: ["model-slash"],
+            enabled: true
+        )
+        let fixture = try await RoutingFixture.start(
+            providers: [provider],
+            upstreams: [RoutingFixture.Upstream(stub: stub, port: upstreamPort)]
+        )
+        do {
+            let response = try await fixture.postMessages(model: "model-slash")
+            #expect(response.status == .ok)
+            #expect(response.body == #"{"id":"from-slash"}"#)
+
+            let received = await fixture.upstreams[0].stub.lastRequest()
+            #expect(received.uri == "/v1/messages")
+        } catch {
+            try? await fixture.shutdown()
+            throw error
+        }
+        try await fixture.shutdown()
+    }
+
     @Test("未识别路径 → 404 not_found_error（Anthropic 错误体）")
     func unrecognizedPathYieldsNotFoundError() async throws {
         let fixture = try await RoutingFixture.start(providerSpecs: [

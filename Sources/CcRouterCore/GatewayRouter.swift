@@ -45,7 +45,7 @@ enum GatewayRouter {
             return try Self.modelNotFound(model: model)
         }
 
-        var upstream = HTTPClientRequest(url: provider.baseUrl + "/v1/messages")
+        var upstream = HTTPClientRequest(url: Self.upstreamURL(baseUrl: provider.baseUrl, path: "/v1/messages"))
         upstream.method = .POST
         upstream.headers = forwardedHeaders(from: request.headers, apiKey: provider.apiKey)
         upstream.body = .bytes(body)
@@ -60,15 +60,35 @@ enum GatewayRouter {
             )
         }
 
-        var fields = HTTPFields()
-        for (name, value) in response.headers {
-            guard let name = HTTPField.Name(name) else { continue }
-            fields.append(.init(name: name, value: value))
+        let fields = Self.filteredResponseFields(from: response.headers)
+
+        // 首字节边界（design 5.2）：Hummingbird 在 handler 返回 Response 的瞬间
+        // 就把响应头写给客户端，之后再无法改写状态码。因此先读到上游响应体的
+        // 第一段再提交响应——上游若在首字节前失败（连接失败、停滞超时、回了
+        // 响应头就断开），此刻还能完整转写 502；一旦开始写出就只能断开连接。
+        var upstreamIterator = response.body.makeAsyncIterator()
+        let firstChunk: ByteBuffer?
+        do {
+            firstChunk = try await upstreamIterator.next()
+        } catch {
+            return try Self.apiError(
+                message: "Provider「\(provider.name)」的上游在响应首字节前中断（\(provider.baseUrl)）"
+            )
         }
+        guard let firstChunk else {
+            // 上游响应体为空：原样回空体。
+            return Response(status: HTTPResponse.Status(code: Int(response.status.code)), headers: fields)
+        }
+
+        // 上游响应体剩余分段逐段接进 Hummingbird 流式响应（contentLength 为
+        // nil 走 chunked，design 5.2）：不聚合、不改写、不掐断。
         return Response(
             status: HTTPResponse.Status(code: Int(response.status.code)),
             headers: fields,
-            body: .init(asyncSequence: response.body)
+            body: .init(asyncSequence: FirstChunkThenUpstreamBody(
+                first: firstChunk,
+                rest: .init(iterator: upstreamIterator)
+            ))
         )
     }
 
@@ -122,17 +142,40 @@ enum GatewayRouter {
 
     /// 转发请求头：原样透传，仅鉴权头（`x-api-key` / `authorization`）替换为
     /// 命中 Provider 的 apiKey（客户端自己的 key 不外泄），并剔除逐跳头与
-    /// 由 HTTP 客户端自行管理的头。
+    /// 由 HTTP 客户端自行管理的头。同名多值头（如两条 `anthropic-beta`）
+    /// 用追加语义逐条保留——`replaceOrAdd` 会只剩最后一个值。
     static func forwardedHeaders(from headers: HTTPFields, apiKey: String) -> HTTPHeaders {
         var forwarded = HTTPHeaders()
         for field in headers {
             let name = field.name.description
             let lowered = name.lowercased()
             guard !Self.hopByHopNames.contains(lowered), lowered != "x-api-key", lowered != "authorization" else { continue }
-            forwarded.replaceOrAdd(name: name, value: field.value)
+            forwarded.add(name: name, value: field.value)
         }
         forwarded.replaceOrAdd(name: "x-api-key", value: apiKey)
         return forwarded
+    }
+
+    /// 拼接上游 URL：baseUrl 规范化去尾斜杠（可带多个）后再拼子路径，
+    /// 带尾斜杠的 baseUrl 不会拼出 `//v1/messages` 之类的双斜杠路径。
+    /// messages 与 count_tokens 两条管线共用。
+    static func upstreamURL(baseUrl: String, path: String) -> String {
+        var base = baseUrl
+        while base.hasSuffix("/") { base.removeLast() }
+        return base + path
+    }
+
+    /// 响应方向的头过滤：剔除逐跳头后复制进 `HTTPFields`，messages 与
+    /// count_tokens 两条管线共用。
+    static func filteredResponseFields(from upstreamHeaders: HTTPHeaders) -> HTTPFields {
+        var fields = HTTPFields()
+        for (name, value) in upstreamHeaders {
+            guard let name = HTTPField.Name(name) else { continue }
+            let lowered = name.description.lowercased()
+            guard !Self.responseHopByHopNames.contains(lowered) else { continue }
+            fields.append(.init(name: name, value: value))
+        }
+        return fields
     }
 
     private static let hopByHopNames: Set<String> = [
@@ -148,6 +191,69 @@ enum GatewayRouter {
         "transfer-encoding",
         "upgrade",
     ]
+
+    /// 响应方向的逐跳头（RFC 9110 §7.6.1）：描述的是上游↔网关这一跳的连接语义，
+    /// 透传给客户端会错误影响网关↔客户端连接（如上游的 `connection: close` 会
+    /// 提前掐断客户端连接）。content-length 属于实体描述、长度与透传体一致，保留。
+    private static let responseHopByHopNames: Set<String> = [
+        "connection",
+        "keep-alive",
+        "proxy-connection",
+        "proxy-authenticate",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+    ]
+}
+
+/// 首字节边界（design 5.2）用的拼接序列：把 `GatewayRouter.proxy` 预读出的
+/// 上游首段与尚未消费的上游迭代器拼成一条流，整体接进 Hummingbird 的
+/// `ResponseBody(asyncSequence:)` chunked 写出。
+private struct FirstChunkThenUpstreamBody: AsyncSequence, Sendable {
+    typealias Element = ByteBuffer
+
+    private let first: ByteBuffer
+    private let rest: UpstreamIteratorBox
+
+    init(first: ByteBuffer, rest: UpstreamIteratorBox) {
+        self.first = first
+        self.rest = rest
+    }
+
+    struct AsyncIterator: AsyncIteratorProtocol {
+        private var first: ByteBuffer?
+        private let rest: UpstreamIteratorBox
+
+        init(first: ByteBuffer?, rest: UpstreamIteratorBox) {
+            self.first = first
+            self.rest = rest
+        }
+
+        mutating func next() async throws -> ByteBuffer? {
+            if let chunk = self.first {
+                self.first = nil
+                return chunk
+            }
+            return try await self.rest.iterator?.next()
+        }
+    }
+
+    func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(first: self.first, rest: self.rest)
+    }
+}
+
+/// `HTTPClientResponse.Body.AsyncIterator` 被 AsyncHTTPClient 刻意标为非
+/// Sendable（迭代器持流内可变状态）。网关的用法是严格单次的：proxy 预读
+/// 首段后，迭代器只在 Hummingbird 响应写出闭包里被单任务顺序消费、独占
+/// 使用、从不并发共享，因此用 unchecked 装箱安全地穿过 Sendable 边界。
+private final class UpstreamIteratorBox: @unchecked Sendable {
+    var iterator: HTTPClientResponse.Body.AsyncIterator?
+
+    init(iterator: HTTPClientResponse.Body.AsyncIterator) {
+        self.iterator = iterator
+    }
 }
 
 /// 白名单守卫（design「3.1」代理路径生命周期第一步）：

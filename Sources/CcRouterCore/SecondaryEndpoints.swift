@@ -27,7 +27,7 @@ extension GatewayRouter {
             return try Self.modelNotFound(model: model)
         }
 
-        var upstream = HTTPClientRequest(url: provider.baseUrl + "/v1/messages/count_tokens")
+        var upstream = HTTPClientRequest(url: Self.upstreamURL(baseUrl: provider.baseUrl, path: "/v1/messages/count_tokens"))
         upstream.method = .POST
         upstream.headers = forwardedHeaders(from: request.headers, apiKey: provider.apiKey)
         upstream.body = .bytes(body)
@@ -44,17 +44,28 @@ extension GatewayRouter {
             return try Self.countTokensFallback()
         }
 
-        var fields = HTTPFields()
-        for (name, value) in response.headers {
-            guard let name = HTTPField.Name(name) else { continue }
-            fields.append(.init(name: name, value: value))
+        // 响应方向与 messages 同一条规则：剔除逐跳头（connection /
+        // transfer-encoding 等）后透传，避免上游连接语义错误影响客户端连接。
+        let fields = Self.filteredResponseFields(from: response.headers)
+
+        // count_tokens 的响应体是小 JSON，不流式：整体读入（上限 1MB）后
+        // 原样回给客户端；读取失败/中断（含超上限）一律走兜底——2xx 但中途
+        // 断开也不再让客户端收断连，token 计数永不阻塞客户端会话（spec 故事 8）。
+        let responseBody: ByteBuffer
+        do {
+            responseBody = try await response.body.collect(upTo: Self.countTokensMaxBodyBytes)
+        } catch {
+            return try Self.countTokensFallback()
         }
         return Response(
             status: HTTPResponse.Status(code: Int(response.status.code)),
             headers: fields,
-            body: .init(asyncSequence: response.body)
+            body: .init(byteBuffer: responseBody)
         )
     }
+
+    /// count_tokens 2xx 响应体整体读入的大小上限。
+    static let countTokensMaxBodyBytes: Int = 1024 * 1024
 
     /// count_tokens 的失败兜底：`200` + `{"input_tokens": 0}`（spec 用户故事 8）。
     static func countTokensFallback() throws -> Response {

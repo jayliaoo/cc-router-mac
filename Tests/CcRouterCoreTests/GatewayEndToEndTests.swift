@@ -153,6 +153,44 @@ struct GatewayEndToEndTests {
         try await fixture.shutdown()
     }
 
+    @Test("同名多值请求头逐条透传：两条 anthropic-beta 都到达上游，鉴权头替换不受影响")
+    func forwardsMultiValuedRequestHeaders() async throws {
+        let upstreamBody = #"{"id":"msg_multi"}"#
+        let fixture = try await GatewayFixture.start(upstreamResponse: UpstreamResponse(
+            status: .ok,
+            headers: [("content-type", "application/json")],
+            body: upstreamBody
+        ))
+        do {
+            // fixture.post 对同名头是替换语义，这里手工构造请求以发出两条同名头。
+            var request = HTTPClientRequest(url: "http://127.0.0.1:\(fixture.gatewayPort)/v1/messages")
+            request.method = .POST
+            request.headers.add(name: "content-type", value: "application/json")
+            request.headers.add(name: "anthropic-beta", value: "beta-one-2024-07-31")
+            request.headers.add(name: "anthropic-beta", value: "beta-two-2024-07-15")
+            request.headers.add(name: "x-api-key", value: "client-secret-key")
+            request.body = .bytes(ByteBuffer(string: #"{"model":"claude-test-model","messages":[]}"#))
+            let response = try await fixture.client.execute(request, timeout: .seconds(30))
+            var buffer = try await response.body.collect(upTo: 1024 * 1024)
+            #expect(response.status == .ok)
+            #expect(String(buffer: buffer) == upstreamBody)
+
+            let received = await fixture.upstream.lastRequest()
+            let betaValues = received.headers
+                .filter { $0.name.lowercased() == "anthropic-beta" }
+                .map(\.value)
+            #expect(betaValues == ["beta-one-2024-07-31", "beta-two-2024-07-15"])
+            // 鉴权头仍是替换语义：客户端 key 不外泄。
+            #expect(firstValue(of: "x-api-key", in: received.headers) == "upstream-configured-key")
+            let headerValues = received.headers.map(\.value)
+            #expect(!headerValues.contains("client-secret-key"))
+        } catch {
+            try? await fixture.shutdown()
+            throw error
+        }
+        try await fixture.shutdown()
+    }
+
     @Test("POST /v1/messages?beta=true 与无查询参数同路由")
     func toleratesQueryParameters() async throws {
         let upstreamBody = #"{"id":"msg_beta"}"#

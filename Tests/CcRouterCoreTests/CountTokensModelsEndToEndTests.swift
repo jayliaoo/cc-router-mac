@@ -1,3 +1,4 @@
+import AsyncHTTPClient
 import Foundation
 import NIOCore
 import NIOHTTP1
@@ -107,6 +108,64 @@ struct CountTokensModelsEndToEndTests {
         try await fixture.shutdown()
     }
 
+    @Test("count_tokens 2xx 响应体中途断开 → 200 与 {\"input_tokens\": 0} 兜底（不流式、整体读入）")
+    func countTokens2xxBodyInterruptedFallsBackToZero() async throws {
+        // 上游回了 2xx 响应头、写出一段响应体后中途断开：网关整体读入失败，
+        // 客户端收兜底而非断连（token 计数永不阻塞客户端会话）。
+        let fixture = try await RoutingFixture.start(providerSpecs: [
+            (UpstreamResponse(
+                status: .ok,
+                headers: [("content-type", "application/json")],
+                chunks: [(#"{"input_tokens":11}"#, nil)],
+                abortAfterChunks: true
+            ), ["model-2xx-abort"], true),
+        ])
+        do {
+            let response = try await fixture.request(
+                .POST, "/v1/messages/count_tokens",
+                body: #"{"model":"model-2xx-abort","messages":[]}"#
+            )
+            #expect(response.status == .ok)
+            #expect(response.body == #"{"input_tokens":0}"#)
+        } catch {
+            try? await fixture.shutdown()
+            throw error
+        }
+        try await fixture.shutdown()
+    }
+
+    @Test("count_tokens baseUrl 带尾斜杠：规范化拼接，上游收到单斜杠路径")
+    func countTokensTrailingSlashBaseUrlNormalized() async throws {
+        let stub = UpstreamStub(response: UpstreamResponse(body: #"{"input_tokens":33}"#))
+        let upstreamPort = try await stub.start()
+        let provider = Provider(
+            name: "尾斜杠上游",
+            baseUrl: "http://127.0.0.1:\(upstreamPort)/",
+            apiKey: "slash-key",
+            models: ["model-slash"],
+            enabled: true
+        )
+        let fixture = try await RoutingFixture.start(
+            providers: [provider],
+            upstreams: [RoutingFixture.Upstream(stub: stub, port: upstreamPort)]
+        )
+        do {
+            let response = try await fixture.request(
+                .POST, "/v1/messages/count_tokens",
+                body: #"{"model":"model-slash","messages":[]}"#
+            )
+            #expect(response.status == .ok)
+            #expect(response.body == #"{"input_tokens":33}"#)
+
+            let received = await fixture.upstreams[0].stub.lastRequest()
+            #expect(received.uri == "/v1/messages/count_tokens")
+        } catch {
+            try? await fixture.shutdown()
+            throw error
+        }
+        try await fixture.shutdown()
+    }
+
     @Test("count_tokens 未命中模型 → 404 model_not_found（兜底不吞路由错误）")
     func countTokensModelNotFoundStill404() async throws {
         let fixture = try await RoutingFixture.start(providerSpecs: [
@@ -200,5 +259,28 @@ struct CountTokensModelsEndToEndTests {
             throw error
         }
         try await fixture.shutdown()
+    }
+
+    /// 单元级（非端到端）：messages 与 count_tokens 共用的响应头过滤逻辑
+    /// ——逐跳头剔除、实体头保留。
+    @Test("响应头过滤：connection/transfer-encoding 等逐跳头剔除，content-length 等实体头保留")
+    func responseHeaderFilterStripsHopByHopOnly() throws {
+        var upstream = HTTPHeaders()
+        upstream.add(name: "content-type", value: "application/json")
+        upstream.add(name: "content-length", value: "18")
+        upstream.add(name: "x-request-id", value: "req-1")
+        upstream.add(name: "connection", value: "close")
+        upstream.add(name: "keep-alive", value: "timeout=5")
+        upstream.add(name: "transfer-encoding", value: "chunked")
+
+        let fields = GatewayRouter.filteredResponseFields(from: upstream)
+        let names = fields.map { $0.name.description.lowercased() }
+
+        #expect(names.contains("content-type"))
+        #expect(names.contains("content-length"))
+        #expect(names.contains("x-request-id"))
+        #expect(!names.contains("connection"))
+        #expect(!names.contains("keep-alive"))
+        #expect(!names.contains("transfer-encoding"))
     }
 }
